@@ -1,14 +1,9 @@
 import 'dotenv/config';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { pool } from '../src/db.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+import { SCHEMA } from './schema.js';
 
 try {
-  await pool.query(sql);
+  await pool.query(SCHEMA);
   console.log('Schema ready');
 } catch (err) {
   console.error('Migration failed:', err.message);

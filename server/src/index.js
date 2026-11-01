@@ -11,6 +11,7 @@ import { query } from './db.js';
 import { login, requireAuth } from './auth.js';
 import { resources, profileFields, pickFields } from './resources.js';
 import { ALLOWED, UPLOAD_DIR, saveFile } from './storage.js';
+import { ensureDatabase } from './setup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST = path.resolve(__dirname, '../../client/dist');
@@ -30,6 +31,9 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const ORDER = 'ORDER BY sort_order ASC, id ASC';
+
+// Make sure tables (and starter content) exist before any API request.
+app.use('/api', (req, res, next) => { ensureDatabase().then(() => next(), next); });
 
 // ---------- Auth ----------
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });

@@ -1,5 +1,5 @@
--- Portfolio schema. Safe to run more than once.
-
+// Portfolio database schema. Safe to run more than once.
+export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS profile (
   id            INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   full_name     TEXT NOT NULL DEFAULT '',
@@ -113,3 +113,4 @@ CREATE TABLE IF NOT EXISTS leadership (
 );
 
 INSERT INTO profile (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+`;

@@ -70,7 +70,7 @@ export default function Portfolio() {
 
   useReveal([data]);
 
-  if (error) return <div className="page-loading">Couldn't load the portfolio. Check the API server is running, then refresh.</div>;
+  if (error) return <div className="page-loading" style={{ textAlign: 'center', padding: 16 }}>Couldn't load the portfolio.<br />{error}</div>;
   if (!data) return <div className="page-loading">Loading...</div>;
 
   const { profile: p, experiences, projects, education, skills, languages, certifications, awards, leadership } = data;

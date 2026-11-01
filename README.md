@@ -34,8 +34,9 @@ client/          React app (public site + admin)
 server/          Express API
   src/index.js                   routes
   src/resources.js               allowed fields per content type
-  db/schema.sql                  database tables
-  db/seed.js                     starter content from the resume
+  db/schema.js                   database tables
+  db/content.js                  starter content from the resume
+  db/seed.js                     loads it (with files) into a database
   uploads/                       uploaded files (not committed)
 ```
 
@@ -75,12 +76,7 @@ To wipe content and reload the starter data: `npm --prefix server run db:seed --
    - Add a **Blob** store. This sets `BLOB_READ_WRITE_TOKEN`. Uploads go here, because Vercel can't keep files on disk.
 2. **Environment variables** (Settings → Environment Variables): `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET` (generate with `openssl rand -hex 32`).
 3. **Redeploy** so the new variables take effect.
-4. **Create tables and load content** once, from your computer:
-   ```bash
-   npm i -g vercel && vercel link && vercel env pull server/.env.production
-   cd server && node --env-file=.env.production db/migrate.js && node --env-file=.env.production db/seed.js
-   ```
-   This also uploads the portrait, logo, certificates and resume to Blob if the resume folder sits next to the project.
+On the first request, the server creates its tables and loads the starter content from the resume into an empty database. Upload your photo, resume and certificates in `/admin` afterwards (or run `db/seed.js` locally against the production database to upload them from the resume folder).
 
 Uploads on Vercel are limited to 4 MB per file.
 
