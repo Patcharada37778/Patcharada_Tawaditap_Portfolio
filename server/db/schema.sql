@@ -112,14 +112,4 @@ CREATE TABLE IF NOT EXISTS leadership (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Contact form submissions from visitors
-CREATE TABLE IF NOT EXISTS messages (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL,
-  email       TEXT NOT NULL,
-  message     TEXT NOT NULL,
-  is_read     BOOLEAN NOT NULL DEFAULT false,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 INSERT INTO profile (id) VALUES (1) ON CONFLICT (id) DO NOTHING;

@@ -20,7 +20,6 @@ A personal portfolio with a public site and a private admin panel for managing i
 | Certifications | Name, issuer, credential link, certificate image |
 | Awards | Title, issuer, year |
 | Leadership | Roles and descriptions |
-| Messages | Submissions from the public contact form |
 
 Every list can be reordered with the ↑ ↓ buttons.
 
@@ -85,8 +84,6 @@ Host it anywhere that runs Node and PostgreSQL (Render, Railway, Fly.io, a VPS).
 | GET / POST | `/api/:type` | POST needs admin |
 | PUT / DELETE | `/api/:type/:id` | admin |
 | POST | `/api/upload` | admin — `multipart/form-data` field `file` |
-| POST | `/api/messages` | public, rate limited |
-| GET / PATCH / DELETE | `/api/messages[/:id]` | admin |
 | POST | `/api/auth/login` | public, rate limited |
 
 `:type` is one of `experiences`, `projects`, `education`, `skills`, `languages`, `certifications`, `awards`, `leadership`.

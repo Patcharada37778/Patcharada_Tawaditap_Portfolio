@@ -4,7 +4,6 @@ import Login from './pages/admin/Login.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import ProfileEditor from './pages/admin/ProfileEditor.jsx';
 import ResourceManager from './pages/admin/ResourceManager.jsx';
-import Messages from './pages/admin/Messages.jsx';
 import { RESOURCES } from './pages/admin/config.js';
 
 export default function App() {
@@ -15,7 +14,6 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="profile" replace />} />
         <Route path="profile" element={<ProfileEditor />} />
-        <Route path="messages" element={<Messages />} />
         {RESOURCES.map((r) => (
           <Route key={r.key} path={r.key} element={<ResourceManager key={r.key} resource={r} />} />
         ))}

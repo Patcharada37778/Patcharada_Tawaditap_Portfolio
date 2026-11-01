@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Container, Row, Col, Button, Form, Modal, Alert } from 'react-bootstrap';
+import { Row, Col, Button, Modal } from 'react-bootstrap';
 import { api, lines, csv, range } from '../api.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -49,59 +49,6 @@ function CopyEmail({ email }) {
     <button type="button" className="copy-chip" onClick={copy} aria-label={`Copy email address ${email}`}>
       {email}<span className="hint">{copied ? 'Copied' : 'Copy'}</span>
     </button>
-  );
-}
-
-function ContactForm() {
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
-  const [state, setState] = useState({ status: 'idle', error: '' });
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setState({ status: 'sending', error: '' });
-    try {
-      await api('/messages', { method: 'POST', body: form });
-      setForm({ name: '', email: '', message: '' });
-      setState({ status: 'sent', error: '' });
-    } catch (err) {
-      setState({ status: 'idle', error: err.message });
-    }
-  };
-
-  if (state.status === 'sent') {
-    return (
-      <div className="card-x" style={{ padding: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 8 }}>Message sent</div>
-        <p className="mb-3">Thanks for reaching out. I'll reply by email.</p>
-        <Button variant="line" onClick={() => setState({ status: 'idle', error: '' })}>Send Another Message</Button>
-      </div>
-    );
-  }
-
-  return (
-    <Form onSubmit={submit} className="card-x" style={{ padding: 24 }}>
-      {state.error && <Alert variant="danger">{state.error}</Alert>}
-      <Row className="g-3">
-        <Col sm={6}>
-          <Form.Label htmlFor="c-name">Name</Form.Label>
-          <Form.Control id="c-name" required value={form.name} onChange={set('name')} autoComplete="name" />
-        </Col>
-        <Col sm={6}>
-          <Form.Label htmlFor="c-email">Email</Form.Label>
-          <Form.Control id="c-email" type="email" required value={form.email} onChange={set('email')} autoComplete="email" />
-        </Col>
-        <Col xs={12}>
-          <Form.Label htmlFor="c-msg">Message</Form.Label>
-          <Form.Control id="c-msg" as="textarea" rows={5} required value={form.message} onChange={set('message')} />
-        </Col>
-        <Col xs={12}>
-          <Button type="submit" variant="ink" disabled={state.status === 'sending'}>
-            {state.status === 'sending' ? 'Sending...' : 'Send Message'}
-          </Button>
-        </Col>
-      </Row>
-    </Form>
   );
 }
 
@@ -356,7 +303,9 @@ export default function Portfolio() {
         <section className="section frame-pad" id="contact">
           <Row className="g-4 g-lg-5">
             <Col lg={5}>
-              <SectionHead eyebrow="Contact" title="Let's talk" sub="Have a role, project or question? Send a message or reach me directly." />
+              <SectionHead eyebrow="Contact" title="Let's talk" sub="Have a role, project or question? Reach me directly." />
+            </Col>
+            <Col lg={7}>
               <div className="reveal">
                 {p.email && <a className="contact-link" href={`mailto:${p.email}`}><span><span className="k d-block">Email</span>{p.email}</span><span className="arrow">↗</span></a>}
                 {p.linkedin_url && <a className="contact-link" href={p.linkedin_url} target="_blank" rel="noopener"><span><span className="k d-block">LinkedIn</span>{p.linkedin_url.replace(/^https?:\/\/(www\.)?/, '')}</span><span className="arrow">↗</span></a>}
@@ -365,7 +314,6 @@ export default function Portfolio() {
                 {p.phone && <a className="contact-link" href={`tel:${p.phone.replace(/\s/g, '')}`}><span><span className="k d-block">Phone</span>{p.phone}</span><span className="arrow">↗</span></a>}
               </div>
             </Col>
-            <Col lg={7} className="reveal"><ContactForm /></Col>
           </Row>
         </section>
       </main>

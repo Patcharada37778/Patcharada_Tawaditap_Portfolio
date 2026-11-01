@@ -9,17 +9,15 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [counts, setCounts] = useState({});
-  const [unread, setUnread] = useState(0);
   const [toast, setToast] = useState('');
   const token = getToken();
 
   const refreshCounts = useCallback(async () => {
     try {
-      const [data, msgs] = await Promise.all([api('/portfolio'), api('/messages', { auth: true })]);
+      const data = await api('/portfolio');
       const c = {};
       RESOURCES.forEach((r) => { c[r.key] = data[r.key]?.length ?? 0; });
       setCounts(c);
-      setUnread(msgs.filter((m) => !m.is_read).length);
     } catch { /* counts are cosmetic */ }
   }, []);
 
@@ -36,16 +34,14 @@ export default function AdminLayout() {
 
   const signOut = () => { setToken(null); navigate('/admin/login'); };
   const current = location.pathname.split('/')[2] || 'profile';
-  const currentLabel = current === 'profile' ? 'Profile' : current === 'messages' ? 'Messages' : RESOURCES.find((r) => r.key === current)?.label;
+  const currentLabel = current === 'profile' ? 'Profile' : RESOURCES.find((r) => r.key === current)?.label;
 
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <NavLink to="/admin" className="wordmark">portfolio/admin</NavLink>
         <div className="sec-label">General</div>
-        <NavLink to="/admin/profile" className="side-link">Profile & Contact</NavLink>
-        <NavLink to="/admin/messages" className="side-link">Messages {unread > 0 && <span className="count">{unread} new</span>}</NavLink>
-        <div className="sec-label">Content</div>
+        <NavLink to="/admin/profile" className="side-link">Profile & Contact</NavLink>        <div className="sec-label">Content</div>
         {RESOURCES.map((r) => (
           <NavLink key={r.key} to={`/admin/${r.key}`} className="side-link">
             {r.label} <span className="count">{counts[r.key] ?? ''}</span>
@@ -69,9 +65,7 @@ export default function AdminLayout() {
         <div className="admin-content">
           <div className="admin-mobile-nav mb-3">
             <Form.Select aria-label="Section" value={current} onChange={(e) => navigate(`/admin/${e.target.value}`)}>
-              <option value="profile">Profile & Contact</option>
-              <option value="messages">Messages{unread ? ` (${unread} new)` : ''}</option>
-              {RESOURCES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+              <option value="profile">Profile & Contact</option>              {RESOURCES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
             </Form.Select>
           </div>
           <Outlet context={{ notify }} />

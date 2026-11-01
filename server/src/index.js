@@ -86,36 +86,6 @@ app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}`, name: req.file.originalname, size: req.file.size });
 });
 
-// ---------- Contact messages ----------
-const contactLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
-
-app.post('/api/messages', contactLimiter, wrap(async (req, res) => {
-  const name = String(req.body?.name || '').trim().slice(0, 200);
-  const email = String(req.body?.email || '').trim().slice(0, 200);
-  const message = String(req.body?.message || '').trim().slice(0, 5000);
-  if (!name || !message || !/^\S+@\S+\.\S+$/.test(email)) {
-    return res.status(400).json({ error: 'Add your name, a valid email and a message, then send again.' });
-  }
-  await query('INSERT INTO messages (name, email, message) VALUES ($1, $2, $3)', [name, email, message]);
-  res.status(201).json({ ok: true });
-}));
-
-app.get('/api/messages', requireAuth, wrap(async (req, res) => {
-  const { rows } = await query('SELECT * FROM messages ORDER BY created_at DESC');
-  res.json(rows);
-}));
-
-app.patch('/api/messages/:id', requireAuth, wrap(async (req, res) => {
-  const { rows } = await query('UPDATE messages SET is_read = $1 WHERE id = $2 RETURNING *', [req.body?.is_read !== false, req.params.id]);
-  if (!rows[0]) return res.status(404).json({ error: 'Message not found.' });
-  res.json(rows[0]);
-}));
-
-app.delete('/api/messages/:id', requireAuth, wrap(async (req, res) => {
-  await query('DELETE FROM messages WHERE id = $1', [req.params.id]);
-  res.status(204).end();
-}));
-
 // ---------- Generic CRUD for list content ----------
 function getResource(req, res) {
   const def = resources[req.params.resource];
