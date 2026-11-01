@@ -66,14 +66,32 @@ npm run dev
 
 To wipe content and reload the starter data: `npm --prefix server run db:seed -- --force`.
 
-## Production
+## Deploy on Vercel
+
+`vercel.json` deploys the client and server as two services in one Vercel project: requests to `/api/*` go to Express, everything else to the React app.
+
+1. **Storage** (Vercel project → Storage):
+   - Add a **Neon Postgres** database. This sets `DATABASE_URL`.
+   - Add a **Blob** store. This sets `BLOB_READ_WRITE_TOKEN`. Uploads go here, because Vercel can't keep files on disk.
+2. **Environment variables** (Settings → Environment Variables): `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET` (generate with `openssl rand -hex 32`).
+3. **Redeploy** so the new variables take effect.
+4. **Create tables and load content** once, from your computer:
+   ```bash
+   npm i -g vercel && vercel link && vercel env pull server/.env.production
+   cd server && node --env-file=.env.production db/migrate.js && node --env-file=.env.production db/seed.js
+   ```
+   This also uploads the portrait, logo, certificates and resume to Blob if the resume folder sits next to the project.
+
+Uploads on Vercel are limited to 4 MB per file.
+
+## Other hosts
 
 ```bash
 npm run build     # builds client/dist
 npm start         # Express serves the API and the built site on PORT
 ```
 
-Host it anywhere that runs Node and PostgreSQL (Render, Railway, Fly.io, a VPS). Set the same variables from `server/.env.example` in the host's settings, and keep `server/uploads/` on persistent storage so uploaded files survive redeploys.
+Any host that runs Node and PostgreSQL works (Render, Railway, Fly.io, a VPS). Set the variables from `server/.env.example`, and either set `BLOB_READ_WRITE_TOKEN` or keep `server/uploads/` on persistent storage.
 
 ## API
 

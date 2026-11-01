@@ -12,6 +12,7 @@
     "db:setup": "node db/migrate.js && node db/seed.js"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",

@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import path from 'node:path';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
@@ -11,13 +10,15 @@ import multer from 'multer';
 import { query } from './db.js';
 import { login, requireAuth } from './auth.js';
 import { resources, profileFields, pickFields } from './resources.js';
+import { ALLOWED, UPLOAD_DIR, saveFile } from './storage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
 const CLIENT_DIST = path.resolve(__dirname, '../../client/dist');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const ON_VERCEL = Boolean(process.env.VERCEL);
 
 const app = express();
+// Behind Vercel's proxy, trust it for the visitor's IP (used by rate limiting).
+if (ON_VERCEL) app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(',') : true }));
 app.use(express.json({ limit: '1mb' }));
@@ -65,37 +66,22 @@ app.put('/api/profile', requireAuth, wrap(async (req, res) => {
 }));
 
 // ---------- File uploads (images and PDFs) ----------
-const ALLOWED = {
-  'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
-  'image/svg+xml': '.svg', 'application/pdf': '.pdf',
-};
-// Keep the uploaded file's own name (cleaned up), adding -2, -3... if it's taken.
-function safeFilename(file) {
-  const ext = ALLOWED[file.mimetype];
-  const base = path.parse(file.originalname).name
-    .normalize('NFKD').replace(/[^\w.-]+/g, '_').replace(/^[._]+|[._]+$/g, '').slice(0, 80)
-    || crypto.randomBytes(6).toString('hex');
-  let name = `${base}${ext}`;
-  for (let i = 2; fs.existsSync(path.join(UPLOAD_DIR, name)); i++) name = `${base}-${i}${ext}`;
-  return name;
-}
-
+// Vercel caps request bodies at 4.5 MB, so uploads there are limited to 4 MB.
+const MAX_MB = ON_VERCEL ? 4 : 15;
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, cb) => cb(null, safeFilename(file)),
-  }),
-  limits: { fileSize: 15 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (ALLOWED[file.mimetype]) cb(null, true);
     else cb(Object.assign(new Error('Only JPG, PNG, WEBP, GIF, SVG or PDF files can be uploaded.'), { status: 400 }));
   },
 });
 
-app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
+app.post('/api/upload', requireAuth, upload.single('file'), wrap(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Choose a file to upload.' });
-  res.json({ url: `/uploads/${req.file.filename}`, name: req.file.originalname, size: req.file.size });
-});
+  const url = await saveFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+  res.json({ url, name: req.file.originalname, size: req.file.size });
+}));
 
 // ---------- Generic CRUD for list content ----------
 function getResource(req, res) {
@@ -147,7 +133,7 @@ app.delete('/api/:resource/:id', requireAuth, wrap(async (req, res) => {
 }));
 
 // ---------- Serve the built React app in production ----------
-if (fs.existsSync(CLIENT_DIST)) {
+if (!ON_VERCEL && fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST));
   app.get(/^\/(?!api|uploads).*/, (req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
 }
@@ -155,12 +141,17 @@ if (fs.existsSync(CLIENT_DIST)) {
 // ---------- Errors ----------
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'File is larger than 15 MB.' : err.message });
+    return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? `File is larger than ${MAX_MB} MB.` : err.message });
   }
   if (err.status) return res.status(err.status).json({ error: err.message });
   console.error(err);
   res.status(500).json({ error: 'Something went wrong on the server. Check the server log, then retry.' });
 });
 
-const port = Number(process.env.PORT) || 4000;
-app.listen(port, () => console.log(`API ready on http://localhost:${port}`));
+// On Vercel the exported app is run as a function; locally it listens on a port.
+if (!ON_VERCEL) {
+  const port = Number(process.env.PORT) || 4000;
+  app.listen(port, () => console.log(`API ready on http://localhost:${port}`));
+}
+
+export default app;

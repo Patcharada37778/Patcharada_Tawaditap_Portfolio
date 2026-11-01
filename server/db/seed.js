@@ -1,24 +1,26 @@
 // Fills an empty database with starter content from the resume.
 // Run with --force to wipe existing content and reseed.
 // If the resume folder sits next to this project, the portrait, logo, certificates
-// and resume PDF are copied into uploads/ too (set SEED_ASSETS_DIR to point elsewhere).
+// and resume PDF are uploaded too (to Vercel Blob when BLOB_READ_WRITE_TOKEN is set,
+// otherwise to uploads/). Set SEED_ASSETS_DIR to point elsewhere.
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../src/db.js';
+import { saveFile } from '../src/storage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = process.env.SEED_ASSETS_DIR || path.resolve(__dirname, '../../..');
-const UPLOADS = path.resolve(__dirname, '../uploads');
 const force = process.argv.includes('--force');
 
-function copyAsset(relPath, targetName) {
+const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.pdf': 'application/pdf' };
+
+async function copyAsset(relPath, targetName) {
   const src = path.join(ASSETS, relPath);
   if (!fs.existsSync(src)) return '';
-  fs.mkdirSync(UPLOADS, { recursive: true });
-  fs.copyFileSync(src, path.join(UPLOADS, targetName));
-  return `/uploads/${targetName}`;
+  const mime = MIME[path.extname(src).toLowerCase()];
+  return saveFile(fs.readFileSync(src), targetName, mime);
 }
 
 async function insertMany(table, rows) {
@@ -42,9 +44,9 @@ try {
   }
   if (force) await pool.query(`TRUNCATE ${TABLES.join(', ')} RESTART IDENTITY`);
 
-  const photo = copyAsset('My Portrait.JPG', 'seed-portrait.jpg');
-  const resume = copyAsset('Patcharada_Tawaditap_Resume.pdf', 'Patcharada_Tawaditap_Resume.pdf');
-  const chula = copyAsset('Logo_of_Chulalongkorn_University.svg.png', 'seed-chula.png');
+  const photo = await copyAsset('My Portrait.JPG', 'Patcharada_Tawaditap.jpg');
+  const resume = await copyAsset('Patcharada_Tawaditap_Resume.pdf', 'Patcharada_Tawaditap_Resume.pdf');
+  const chula = await copyAsset('Logo_of_Chulalongkorn_University.svg.png', 'Chulalongkorn_University.png');
 
   await pool.query(
     `UPDATE profile SET full_name=$1, headline=$2, tagline=$3, bio=$4, location=$5, availability=$6,
@@ -163,9 +165,9 @@ try {
   ]);
 
   await insertMany('certifications', [
-    { name: 'HCCDA-AI', issuer: 'Huawei Cloud', image_url: copyAsset('Certificates/HCCDA-AI.png', 'seed-cert-hccda-ai.png') },
-    { name: 'HCCDA-Tech Essentials', issuer: 'Huawei Cloud', image_url: copyAsset('Certificates/HCCDA-Tech Essential.png', 'seed-cert-hccda-tech.png') },
-    { name: 'HCCDP-Solution Architecture', issuer: 'Huawei Cloud', image_url: copyAsset('Certificates/HCCDP-Solution Architecture.png', 'seed-cert-hccdp-sa.png') },
+    { name: 'HCCDA-AI', issuer: 'Huawei Cloud', image_url: await copyAsset('Certificates/HCCDA-AI.png', 'HCCDA-AI.png') },
+    { name: 'HCCDA-Tech Essentials', issuer: 'Huawei Cloud', image_url: await copyAsset('Certificates/HCCDA-Tech Essential.png', 'HCCDA-Tech_Essentials.png') },
+    { name: 'HCCDP-Solution Architecture', issuer: 'Huawei Cloud', image_url: await copyAsset('Certificates/HCCDP-Solution Architecture.png', 'HCCDP-Solution_Architecture.png') },
   ]);
 
   await insertMany('awards', [
