@@ -69,10 +69,21 @@ const ALLOWED = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
   'image/svg+xml': '.svg', 'application/pdf': '.pdf',
 };
+// Keep the uploaded file's own name (cleaned up), adding -2, -3... if it's taken.
+function safeFilename(file) {
+  const ext = ALLOWED[file.mimetype];
+  const base = path.parse(file.originalname).name
+    .normalize('NFKD').replace(/[^\w.-]+/g, '_').replace(/^[._]+|[._]+$/g, '').slice(0, 80)
+    || crypto.randomBytes(6).toString('hex');
+  let name = `${base}${ext}`;
+  for (let i = 2; fs.existsSync(path.join(UPLOAD_DIR, name)); i++) name = `${base}-${i}${ext}`;
+  return name;
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOAD_DIR,
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ALLOWED[file.mimetype]}`),
+    filename: (req, file, cb) => cb(null, safeFilename(file)),
   }),
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {

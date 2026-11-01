@@ -43,7 +43,7 @@ try {
   if (force) await pool.query(`TRUNCATE ${TABLES.join(', ')} RESTART IDENTITY`);
 
   const photo = copyAsset('My Portrait.JPG', 'seed-portrait.jpg');
-  const resume = copyAsset('Patcharada_Tawaditap_Resume.pdf', 'seed-resume.pdf');
+  const resume = copyAsset('Patcharada_Tawaditap_Resume.pdf', 'Patcharada_Tawaditap_Resume.pdf');
   const chula = copyAsset('Logo_of_Chulalongkorn_University.svg.png', 'seed-chula.png');
 
   await pool.query(
