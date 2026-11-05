@@ -36,10 +36,20 @@ export async function saveFile(buffer, originalName, mimetype) {
   const base = baseName(originalName);
 
   if (useBlob()) {
-    let name = `${base}${ext}`;
-    for (let i = 2; await blobExists(`uploads/${name}`); i++) name = `${base}-${i}${ext}`;
-    const blob = await put(`uploads/${name}`, buffer, { access: 'public', contentType: mimetype, addRandomSuffix: false });
-    return blob.url;
+    try {
+      let name = `${base}${ext}`;
+      for (let i = 2; await blobExists(`uploads/${name}`); i++) name = `${base}-${i}${ext}`;
+      const blob = await put(`uploads/${name}`, buffer, { access: 'public', contentType: mimetype, addRandomSuffix: false });
+      return blob.url;
+    } catch (err) {
+      console.error(err);
+      throw Object.assign(new Error(`File storage (Vercel Blob) refused the upload: ${err.message}`), { status: 502 });
+    }
+  }
+
+  // Vercel's disk is read-only, so without a Blob store there is nowhere to save the file.
+  if (process.env.VERCEL) {
+    throw Object.assign(new Error('Uploads need a Vercel Blob store. In Vercel, open this project, go to Storage, add a Blob store, then redeploy.'), { status: 503 });
   }
 
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
