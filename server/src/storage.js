@@ -1,4 +1,4 @@
-// Saves uploaded files. Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set
+// Saves uploaded files. Uses Vercel Blob when BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID is set
 // (Vercel can't keep files on disk), otherwise the local uploads/ folder.
 // A private Blob store is the default; its files are served by GET /api/files/:name.
 // Set BLOB_ACCESS=public if the store was created as public.
@@ -10,7 +10,8 @@ import { put, head, get, BlobNotFoundError } from '@vercel/blob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
-export const useBlob = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+// Newer Vercel stores connect with BLOB_STORE_ID (and sign in automatically) instead of a token.
+export const useBlob = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 const blobAccess = () => (process.env.BLOB_ACCESS === 'public' ? 'public' : 'private');
 
 export const ALLOWED = {
