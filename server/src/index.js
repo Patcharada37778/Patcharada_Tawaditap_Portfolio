@@ -10,7 +10,8 @@ import multer from 'multer';
 import { query } from './db.js';
 import { login, requireAuth } from './auth.js';
 import { resources, profileFields, pickFields } from './resources.js';
-import { ALLOWED, UPLOAD_DIR, saveFile } from './storage.js';
+import { Readable } from 'node:stream';
+import { ALLOWED, UPLOAD_DIR, saveFile, readBlobFile } from './storage.js';
 import { ensureDatabase } from './setup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,17 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
 }));
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Files in a private Blob store, served with the same sandbox as /uploads.
+app.get('/api/files/:name', wrap(async (req, res) => {
+  const file = await readBlobFile(req.params.name);
+  if (!file) return res.status(404).json({ error: 'File not found.' });
+  const type = file.headers.get('content-type');
+  if (type) res.setHeader('Content-Type', type);
+  res.setHeader('Cache-Control', 'public, max-age=604800');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+  Readable.fromWeb(file.stream).pipe(res);
+}));
 const ORDER = 'ORDER BY sort_order ASC, id ASC';
 
 // Make sure tables (and starter content) exist before any API request.

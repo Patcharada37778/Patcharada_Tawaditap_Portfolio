@@ -1,14 +1,17 @@
 // Saves uploaded files. Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set
 // (Vercel can't keep files on disk), otherwise the local uploads/ folder.
+// A private Blob store is the default; its files are served by GET /api/files/:name.
+// Set BLOB_ACCESS=public if the store was created as public.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { put, head, BlobNotFoundError } from '@vercel/blob';
+import { put, head, get, BlobNotFoundError } from '@vercel/blob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
 export const useBlob = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const blobAccess = () => (process.env.BLOB_ACCESS === 'public' ? 'public' : 'private');
 
 export const ALLOWED = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
@@ -39,8 +42,9 @@ export async function saveFile(buffer, originalName, mimetype) {
     try {
       let name = `${base}${ext}`;
       for (let i = 2; await blobExists(`uploads/${name}`); i++) name = `${base}-${i}${ext}`;
-      const blob = await put(`uploads/${name}`, buffer, { access: 'public', contentType: mimetype, addRandomSuffix: false });
-      return blob.url;
+      const access = blobAccess();
+      const blob = await put(`uploads/${name}`, buffer, { access, contentType: mimetype, addRandomSuffix: false });
+      return access === 'public' ? blob.url : `/api/files/${encodeURIComponent(name)}`;
     } catch (err) {
       console.error(err);
       throw Object.assign(new Error(`File storage (Vercel Blob) refused the upload: ${err.message}`), { status: 502 });
@@ -57,4 +61,12 @@ export async function saveFile(buffer, originalName, mimetype) {
   for (let i = 2; fs.existsSync(path.join(UPLOAD_DIR, name)); i++) name = `${base}-${i}${ext}`;
   fs.writeFileSync(path.join(UPLOAD_DIR, name), buffer);
   return `/uploads/${name}`;
+}
+
+// Reads a file from a private Blob store. Returns null if it doesn't exist.
+export async function readBlobFile(name) {
+  if (!useBlob() || !/^[\w.-]+$/.test(name)) return null;
+  const result = await get(`uploads/${name}`, { access: 'private' });
+  if (!result || result.statusCode !== 200) return null;
+  return result;
 }
